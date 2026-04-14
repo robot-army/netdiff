@@ -12,13 +12,18 @@ A command-line tool for comparing KiCad schematics and netlists with git integra
 
 ## Installation
 
-Requires:
-- Python 3.7+
-- `sexpdata` package (install via pip)
-- KiCad 9 with `kicad-cli` (for advanced netlist export)
-- git (for git revision syntax)
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/robot-army/netdiff.git
+   cd netdiff
+   ```
 
-The tool will check for KiCad 9 at startup and exit with an error if not found.
+2. Install dependencies:
+   ```bash
+   pip install sexpdata
+   ```
+
+3. Ensure KiCad 9 is installed and `kicad-cli` is available in your PATH.
 
 ## Usage
 
