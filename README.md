@@ -1,6 +1,6 @@
 # netdiff - KiCad Schematic/Netlist Diff Tool
 
-A command-line tool for comparing KiCad schematics and netlists with git integration.
+A *very AI generated* (but useful for me) command-line tool for comparing KiCad schematics and netlists with git integration.
 
 ## Features
 
