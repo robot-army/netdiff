@@ -339,6 +339,51 @@ def parse_git_spec(spec):
     return None, spec, spec
 
 
+def split_hier_net_name(net_name):
+    """Split a hierarchical net name into (sheet_path, leaf_name)."""
+    if not isinstance(net_name, str):
+        return None, None
+
+    if '/' not in net_name:
+        return None, net_name
+
+    parts = [p for p in net_name.split('/') if p]
+    if len(parts) < 2:
+        return None, net_name
+
+    sheet_path = '/' + '/'.join(parts[:-1])
+    leaf_name = parts[-1]
+    return sheet_path, leaf_name
+
+
+def infer_sheet_rename_map(renamed_pairs, min_count=2):
+    """Infer sheet rename mappings from renamed-net pairs."""
+    counts = {}
+
+    for old_name, new_name in renamed_pairs:
+        old_sheet, old_leaf = split_hier_net_name(old_name)
+        new_sheet, new_leaf = split_hier_net_name(new_name)
+
+        if not old_sheet or not new_sheet:
+            continue
+
+        if old_sheet == new_sheet:
+            continue
+
+        if old_leaf != new_leaf:
+            continue
+
+        key = (old_sheet, new_sheet)
+        counts[key] = counts.get(key, 0) + 1
+
+    inferred = {}
+    for key, count in counts.items():
+        if count >= min_count:
+            inferred[key] = count
+
+    return inferred
+
+
 def load_file(filename):
     """Load and parse a KiCad file."""
     with open(filename, 'r') as f:
@@ -468,16 +513,36 @@ def main():
 
     discards_a = set()
     discards_b = set()
-    renamed_header = False
+    renamed_pairs = []
     for net_name in sorted(only_a):
         for candidate in only_b:
             if nets_a[net_name] == nets_b[candidate]:
-                if not renamed_header:
-                    print("\nRenamed nets (no connection changes):\n")
-                    renamed_header = True
-                print(f"{net_name} => {candidate}")
+                renamed_pairs.append((net_name, candidate))
                 discards_a.add(net_name)
                 discards_b.add(candidate)
+
+    sheet_rename_map = infer_sheet_rename_map(renamed_pairs)
+    sheet_renamed_pairs = []
+    true_renamed_pairs = []
+
+    for old_name, new_name in renamed_pairs:
+        old_sheet, old_leaf = split_hier_net_name(old_name)
+        new_sheet, new_leaf = split_hier_net_name(new_name)
+
+        if old_sheet and new_sheet and old_leaf == new_leaf and (old_sheet, new_sheet) in sheet_rename_map:
+            sheet_renamed_pairs.append((old_name, new_name))
+        else:
+            true_renamed_pairs.append((old_name, new_name))
+
+    if true_renamed_pairs:
+        print("\nRenamed nets (no connection changes):\n")
+        for old_name, new_name in sorted(true_renamed_pairs):
+            print(f"{old_name} => {new_name}")
+
+    if sheet_rename_map:
+        print("\nRenamed sheets (inferred):\n")
+        for (old_sheet, new_sheet), count in sorted(sheet_rename_map.items(), key=lambda item: (-item[1], item[0])):
+            print(f"{old_sheet} => {new_sheet} ({count} nets)")
 
     only_a.difference_update(discards_a)
     only_b.difference_update(discards_b)
